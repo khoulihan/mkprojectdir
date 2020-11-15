@@ -5,9 +5,13 @@ import os
 import argparse
 from pathlib import Path
 import shutil
+import re
 
 
 _debug = False
+
+
+_re_variable = re.compile("\{(?P<variable>[ \w]+)\}")
 
 
 def _parse_arguments():
@@ -45,6 +49,46 @@ def _verify_destination(destination):
         raise FileExistsError()
 
 
+def _find_variables(destination):
+    variables = set()
+    for f in destination.iterdir():
+        matches = re.findall(_re_variable, f.name)
+        if matches:
+            for match in matches:
+                variables.add(match)
+        if f.is_dir():
+            variables = variables.union(_find_variables(f))
+    return variables
+
+
+def _get_replacements(variables):
+    replacements = {}
+    for variable in variables:
+        replacement = input("%s: " % variable)
+        replacements[variable] = replacement
+    return replacements
+
+
+def _replace_variables(destination, replacements):
+    for f in destination.iterdir():
+        if f.is_dir():
+            _replace_variables(f, replacements)
+
+        name = f.name
+        complete = False
+        modified = False
+        while not complete:
+            match = _re_variable.search(name)
+            if match:
+                modified = True
+                variable = match.group('variable')
+                name = name.replace("{%s}" % variable, replacements[variable])
+            else:
+                complete = True
+        if modified:
+            f.rename(f.parent / name)
+
+
 def _main():
     args = _parse_arguments()
     global _debug
@@ -69,7 +113,17 @@ def _main():
             sys.exit(1)
 
         for content in pt_path.iterdir():
-            shutil.copy(content, destination)
+            if content.is_file():
+                shutil.copy(content, destination)
+            else:
+                shutil.copytree(content, destination / content.name, copy_function=shutil.copy)
+
+        variables = _find_variables(destination)
+        if variables:
+            print ("The specified template included variables for replacement.")
+            print ("Please enter the desired values.")
+            replacements = _get_replacements(variables)
+            _replace_variables(destination, replacements)
     except KeyboardInterrupt:
         print()
         sys.exit(0)
