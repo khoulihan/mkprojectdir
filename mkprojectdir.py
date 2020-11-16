@@ -11,8 +11,11 @@ import re
 _debug = False
 
 
-_re_variable = re.compile("\{(?P<variable>[ \w]+)\}")
-
+_re_fs_variable = re.compile("\{(?P<variable>[ \w]+)\}")
+_re_double_brace_variable = re.compile("\{\{(?P<variable>[ \w]+)\}\}")
+_re_double_angles_variable = re.compile("\<\<(?P<variable>[ \w]+)\>\>")
+_double_brace_suffixes = ['.md', '.txt', '.html', '.toml', '.ini']
+_double_angles_suffixes = ['.json', '.yaml', '.py']
 
 def _parse_arguments():
     parser = argparse.ArgumentParser(description="Create standard directory structures for projects.")
@@ -49,15 +52,35 @@ def _verify_destination(destination):
         raise FileExistsError()
 
 
+def _find_file_variables(f, pattern):
+    variables = set()
+    contents = f.read_text()
+    matches = re.findall(pattern, contents)
+    if matches:
+        for match in matches:
+            variables.add(match)
+    return variables
+
+
 def _find_variables(destination):
     variables = set()
     for f in destination.iterdir():
-        matches = re.findall(_re_variable, f.name)
+        matches = re.findall(_re_fs_variable, f.name)
         if matches:
             for match in matches:
                 variables.add(match)
         if f.is_dir():
             variables = variables.union(_find_variables(f))
+        elif f.suffix:
+            if f.suffix in _double_brace_suffixes:
+                variables = variables.union(
+                    _find_file_variables(f, _re_double_brace_variable)
+                )
+            elif f.suffix in _double_angles_suffixes:
+                variables = variables.union(
+                    _find_file_variables(f, _re_double_angles_variable)
+                )
+
     return variables
 
 
@@ -69,16 +92,46 @@ def _get_replacements(variables):
     return replacements
 
 
+def _replace_file_variables(f, pattern, pattern_format, replacements):
+    contents = f.read_text()
+    complete = False
+    modified = False
+    while not complete:
+        match = pattern.search(contents)
+        if match:
+            modified = True
+            variable = match.group('variable')
+            contents = contents.replace(pattern_format % variable, replacements[variable])
+        else:
+            complete = True
+    if modified:
+        f.write_text(contents)
+
 def _replace_variables(destination, replacements):
     for f in destination.iterdir():
         if f.is_dir():
             _replace_variables(f, replacements)
+        elif f.suffix:
+            if f.suffix in _double_brace_suffixes:
+                _replace_file_variables(
+                    f,
+                    _re_double_brace_variable,
+                    "{{%s}}",
+                    replacements
+                )
+            elif f.suffix in _double_angles_suffixes:
+                _replace_file_variables(
+                    f,
+                    _re_double_angles_variable,
+                    "<<%s>>",
+                    replacements
+                )
 
         name = f.name
         complete = False
         modified = False
         while not complete:
-            match = _re_variable.search(name)
+            match = _re_fs_variable.search(name)
             if match:
                 modified = True
                 variable = match.group('variable')

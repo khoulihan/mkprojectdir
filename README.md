@@ -21,3 +21,5 @@ The project template can be a path to a directory, or the name of a template in 
 A template is just a directory structure with whatever files are required for the project type in question.
 
 File and directory names in a template can include variables wrapped in braces (e.g. `{Project Name}.md`). In this event, values will be requested interactively and these variables will be replaced in the destination.
+
+Text files of several types will also be searched for variables to replace. Variables should be wrapped in double braces (`{{...}}`) for markdown, plain-text, HTML, TOML and INI files, and double angle brackets (`<<...>>`) for JSON, YAML and Python files. Other file types are not searched at this time.
