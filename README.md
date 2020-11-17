@@ -12,7 +12,15 @@ The script depends on Python 3.7 (though possibly earlier versions of Python 3 w
 
 ## Usage
 
-The script accepts three commands - create, list, and save.
+The script accepts three commands - create, list, and save. The commands operate on project templates.
+
+### Project Templates
+
+A template is just a directory structure with whatever files are required for the project type in question.
+
+File and directory names in a template can include variables wrapped in braces (e.g. `{Project Name}.md`). In this event, values will be requested interactively when the template is used, and these variables will be replaced in the destination.
+
+Text files of several types will also be searched for variables to replace. Variables should be wrapped in double braces (`{{...}}`) for markdown, plain-text, HTML, TOML and INI files, and double angle brackets (`<<...>>`) for JSON, YAML and Python files. Other file types are not searched at this time.
 
 ### List
 
@@ -42,10 +50,4 @@ The project template can be a path to a directory, or the name of a template in 
 mkprojectdir create art ./new_art_project
 ```
 
-## Project Templates
-
-A template is just a directory structure with whatever files are required for the project type in question.
-
-File and directory names in a template can include variables wrapped in braces (e.g. `{Project Name}.md`). In this event, values will be requested interactively when the template is used, and these variables will be replaced in the destination.
-
-Text files of several types will also be searched for variables to replace. Variables should be wrapped in double braces (`{{...}}`) for markdown, plain-text, HTML, TOML and INI files, and double angle brackets (`<<...>>`) for JSON, YAML and Python files. Other file types are not searched at this time.
+To recreate a template without performing the variable substitutions, use to `--no-subs` switch.

@@ -27,6 +27,7 @@ def _parse_arguments():
     create_parser = subparsers.add_parser('create', aliases=['c', 'mk'], help="create a project directory")
     create_parser.add_argument("project_template", type=str, help="the template to use for the project")
     create_parser.add_argument("destination", type=str, action="store", help="directory to create for the project")
+    create_parser.add_argument("--no-subs", action="store_true", dest="no_subs", help="skip requesting or substituting variable values")
 
     # List templates command
     list_parser = subparsers.add_parser('list', aliases=['ls'], help="list available templates")
@@ -193,12 +194,13 @@ def _create(args):
         else:
             shutil.copytree(content, destination / content.name, copy_function=shutil.copy)
 
-    variables = _find_variables(destination)
-    if variables:
-        print ("The specified template included variables for replacement.")
-        print ("Please enter the desired values.")
-        replacements = _get_replacements(variables)
-        _replace_variables(destination, replacements)
+    if not args.no_subs:
+        variables = _find_variables(destination)
+        if variables:
+            print ("The specified template included variables for replacement.")
+            print ("Please enter the desired values.")
+            replacements = _get_replacements(variables)
+            _replace_variables(destination, replacements)
 
 
 def _list_templates(args):
